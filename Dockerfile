@@ -1,5 +1,5 @@
 # ── stage 1: build the frontend ─────────────────────────────
-FROM node:20-bookworm-slim AS web
+FROM node:26-bookworm-slim AS web
 WORKDIR /build
 COPY web/package.json web/package-lock.json* ./
 RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
@@ -9,7 +9,7 @@ RUN npm run build
 # ── stage 2: server dependencies ────────────────────────────
 # better-sqlite3 and sharp ship prebuilt binaries for the common platforms;
 # the toolchain is here so an architecture without one still builds.
-FROM node:20-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ ca-certificates \
@@ -18,7 +18,7 @@ COPY server/package.json server/package-lock.json* ./
 RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
 
 # ── stage 3: runtime ────────────────────────────────────────
-FROM node:20-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     PORT=8787 \
     DATA_DIR=/data
