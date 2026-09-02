@@ -1,0 +1,48 @@
+{
+  "name": "drydock",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A self-hosted workspace for planning games: moodboard, task board and branching story graph in one project.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThomasYates/drydock.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix web install",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "npm --prefix server test",
+    "build": "npm --prefix web run build",
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix web run dev",
+    "check": "npm run lint && npm test"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "eslint-plugin-react": "^7.37.3",
+    "eslint-plugin-react-hooks": "^5.1.0"
+  },
+  "author": "ThomasYates",
+  "bugs": {
+    "url": "https://github.com/ThomasYates/drydock/issues"
+  },
+  "homepage": "https://github.com/ThomasYates/drydock#readme",
+  "keywords": [
+    "self-hosted",
+    "game-design",
+    "moodboard",
+    "kanban",
+    "narrative-design",
+    "branching-narrative",
+    "infinite-canvas",
+    "docker",
+    "collaboration",
+    "sqlite"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "drydock-web",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.2",
+    "vite": "^5.4.8"
+  },
+  "description": "Drydock web client",
+  "license": "MIT",
+  "author": "ThomasYates",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThomasYates/drydock.git",
+    "directory": "web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

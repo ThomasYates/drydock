@@ -1,0 +1,35 @@
+# Building from source instead of pulling the published image.
+#
+# Use this if you have changed the code, or you would rather not pull a
+# prebuilt image. The first build takes a few minutes: it compiles the
+# frontend and builds better-sqlite3 and sharp for your architecture.
+#
+#   docker compose -f compose.build.yaml up -d --build
+#
+# Everything else behaves exactly as it does in compose.yaml.
+services:
+  drydock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: drydock:local
+    container_name: drydock
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      TZ: Europe/London
+      # SECURE_COOKIE: "1"
+      # TRUST_PROXY: "1"
+      SESSION_DAYS: "30"
+      IMAGE_MAX_EDGE: "2200"
+      IMAGE_QUALITY: "78"
+      MAX_UPLOAD_MB: "40"
+      # A build from source is not a published release, so there is nothing
+      # sensible to compare against.
+      UPDATE_CHECK: "0"
+    volumes:
+      - drydock-data:/data
+
+volumes:
+  drydock-data:

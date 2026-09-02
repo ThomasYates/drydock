@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/test
+**/.git
+**/.github
+**/.DS_Store
+data
+*.log
+*.md
+!README.md
+.env
+.env.local

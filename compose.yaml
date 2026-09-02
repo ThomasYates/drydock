@@ -1,0 +1,35 @@
+services:
+  drydock:
+    image: ghcr.io/thomasyates/drydock:latest
+    container_name: drydock
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      TZ: Europe/London
+
+      # Serving over HTTPS, through a reverse proxy or a Cloudflare Tunnel?
+      # Uncomment both. Without them the session cookie will not stick.
+      # SECURE_COOKIE: "1"
+      # TRUST_PROXY: "1"
+
+      # How long a sign-in lasts, in days.
+      SESSION_DAYS: "30"
+
+      # Uploads are re-encoded to WebP. Longest side in pixels, quality 1-100,
+      # and the ceiling for a single file.
+      IMAGE_MAX_EDGE: "2200"
+      IMAGE_QUALITY: "78"
+      MAX_UPLOAD_MB: "40"
+
+      # Drydock checks the public GitHub releases list every six hours and puts
+      # a notice in the web app when a newer version exists. It never sends
+      # anything. Set to 0 to switch it off entirely.
+      UPDATE_CHECK: "1"
+    volumes:
+      - drydock-data:/data
+      # Prefer a folder you can see? Swap the line above for something like:
+      # - /mnt/tank/apps/drydock:/data
+
+volumes:
+  drydock-data:

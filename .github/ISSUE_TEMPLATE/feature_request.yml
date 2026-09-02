@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Drydock should be able to do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The situation, rather than the feature. It often turns out there is a better answer than the one you had in mind.
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you had in mind
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: I have checked this is not already possible

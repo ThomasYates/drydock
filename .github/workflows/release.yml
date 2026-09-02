@@ -1,0 +1,120 @@
+name: Release
+
+# Pushing a tag is what publishes a version. The tag is the source of truth for
+# the image tag, and Drydock's own update check reads the GitHub release this
+# workflow creates — so a version with no release here is a version nobody's
+# install will ever be told about.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            web/package-lock.json
+
+      - name: Install
+        run: |
+          npm ci
+          npm --prefix server ci
+          npm --prefix web ci
+
+      # No point shipping an image whose tests do not pass.
+      - name: Lint and test
+        run: npm run check
+
+      # The tag and the versions in package.json have to agree, or the account
+      # menu will disagree with the image someone just pulled.
+      - name: Check the tag matches package.json
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          root="$(node -p "require('./package.json').version")"
+          server="$(node -p "require('./server/package.json').version")"
+          web="$(node -p "require('./web/package.json').version")"
+          echo "tag=$tag root=$root server=$server web=$web"
+          if [ "$tag" != "$root" ] || [ "$tag" != "$server" ] || [ "$tag" != "$web" ]; then
+            echo "::error::tag $tag does not match root ($root), server ($server) and web ($web)"
+            exit 1
+          fi
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ghcr.io requires a lowercase image name; a GitHub account is not
+      # necessarily lowercase.
+      - name: Work out the image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Written with the gh CLI, which is already on the runner, rather than a
+      # third-party action. One less thing holding write access to this repo.
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: |
+          set -euo pipefail
+
+          {
+            printf 'Pull it with:\n\n'
+            printf '```bash\n'
+            printf 'docker compose pull && docker compose up -d\n'
+            printf '```\n\n'
+            printf 'Image: `%s:%s`\n\n' "$IMAGE" "$GITHUB_REF_NAME"
+          } > notes.md
+
+          # GitHub's own generated notes go underneath ours
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" -f tag_name="${GITHUB_REF_NAME}" --jq .body >> notes.md
+
+          # a tag like v2.1.0-rc.1 is a pre-release, and Drydock's update check
+          # skips those
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
