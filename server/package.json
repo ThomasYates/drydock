@@ -15,7 +15,7 @@
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.5.0",
     "cookie-parser": "^1.4.7",
-    "express": "^4.21.1",
+    "express": "^5.2.1",
     "multer": "^2.2.0",
     "sharp": "^0.35.3",
     "ws": "^8.18.0",
