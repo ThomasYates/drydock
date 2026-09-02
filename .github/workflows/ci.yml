@@ -54,7 +54,7 @@ jobs:
 
       # amd64 only here. The release workflow does the slow multi-arch build;
       # this one only has to prove the Dockerfile still works.
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build
         uses: docker/build-push-action@v6
