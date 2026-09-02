@@ -34,6 +34,8 @@ changes land on your screen as they make them.
 There is no cloud service, no account to sign up for, and nothing phones home.
 It is one container and one folder of data.
 
+![A Drydock moodboard: reference images and notes arranged on an infinite canvas inside a labelled frame](docs/screenshots/moodboard.png)
+
 ---
 
 ## Running it
@@ -185,6 +187,8 @@ project — or narrowed to the one you are in. Picking a result does not just op
 the right tab: it frames the thing you searched for on the canvas and selects
 it.
 
+![The search palette open over a moodboard, showing one query matching a project, a note, a card, a story beat and an image](docs/screenshots/search.png)
+
 ### Moodboard
 
 | Action | How |
@@ -225,11 +229,20 @@ Cards carry notes, tags, an owner, a due date and a checklist. The card face
 shows what matters at a glance: the tags, the due date in amber (red once it has
 passed), how far through the checklist you are, and who has it.
 
+![A five-column task board. Cards show tags, due dates, checklist progress and owner initials](docs/screenshots/tasks.png)
+
+Opening a card gives you the rest of it. Ticking a step is one click, and
+nothing needs saving separately from the card.
+
+![A card open, showing notes, column, owner, due date, a four-step checklist with two done, and tags](docs/screenshots/card.png)
+
 Drag cards between columns, or right-click one to move it. Right-click the board
 to add or rename a column. Deleting a column holding five or more cards writes a
 restore point first.
 
 ### Story
+
+![A branching story graph: beats, a condition with two ways out, and a choice node with three named options wired to different endings](docs/screenshots/story.png)
 
 **Ports.** Every node has named ways in down its left rail and ways out down its
 right. Add, rename and remove them in the inspector, or right-click a node.
@@ -265,6 +278,8 @@ and ends with a *Loose ends* list of every branch that does not go anywhere yet
 Every meaningful change is logged with who did it. Repeated nudges of the same
 kind fold into one row, so an afternoon of dragging references around does not
 bury the fact that someone deleted a column.
+
+![The History tab listing who changed what, with a tab for restore points](docs/screenshots/history.png)
 
 A **restore point** is a complete copy of the project. Three ways they get
 written:
@@ -303,6 +318,8 @@ project to someone else.
 The palette button beside your name sets dark or light mode, the secondary
 colour used for anything selected or active, and the interface typeface. Those
 three are saved to your account, so they follow you between machines.
+
+![The same story graph in light mode](docs/screenshots/story-light.png)
 
 **Interface scale** (80% to 150%) is kept on the device instead, because the
 right size on a big monitor is the wrong size on a laptop and the same login

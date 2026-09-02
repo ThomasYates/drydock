@@ -3,6 +3,7 @@
 **/test
 **/.git
 **/.github
+docs
 **/.DS_Store
 data
 *.log
