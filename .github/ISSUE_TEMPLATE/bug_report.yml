@@ -1,0 +1,35 @@
+name: Bug report
+description: Something does not work the way it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Drydock version
+      description: The number under your name in the top right.
+      placeholder: "2.0.0"
+    validations: { required: true }
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      multiple: true
+      options: [Moodboard, Tasks, Story, Assets, History, Search, Admin, Sign-in, Import or export, Somewhere else]
+    validations: { required: true }
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: Firefox 141 on Windows 11
+  - type: textarea
+    id: logs
+    attributes:
+      label: Anything in the logs
+      description: "`docker logs drydock`, and the browser console if it is a visual problem."
+      render: shell

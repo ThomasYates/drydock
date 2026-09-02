@@ -1,0 +1,40 @@
+{
+  "name": "drydock-server",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:watch": "node --test --watch \"test/**/*.test.js\"",
+    "cli": "node src/cli.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.5.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.1",
+    "multer": "^2.2.0",
+    "sharp": "^0.35.3",
+    "ws": "^8.18.0",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
+  },
+  "description": "Drydock server: API, realtime and static hosting",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "ThomasYates",
+  "bugs": {
+    "url": "https://github.com/ThomasYates/drydock/issues"
+  },
+  "homepage": "https://github.com/ThomasYates/drydock#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThomasYates/drydock.git",
+    "directory": "server"
+  }
+}
