@@ -2,7 +2,7 @@
 
 Notable changes, newest first. This project follows [semantic versioning](https://semver.org).
 
-## Unreleased
+## 2.0.1
 
 ### Fixed
 

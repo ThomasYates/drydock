@@ -1,6 +1,6 @@
 {
   "name": "drydock",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "description": "A self-hosted workspace for planning games: moodboard, task board and branching story graph in one project.",
