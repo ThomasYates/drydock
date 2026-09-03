@@ -2,6 +2,20 @@
 
 Notable changes, newest first. This project follows [semantic versioning](https://semver.org).
 
+## Unreleased
+
+### Fixed
+
+- **Canvas pan and zoom on a trackpad.** A two-finger swipe on the moodboard or
+  the story graph zoomed instead of moving the canvas, and one flick took the
+  zoom right across its range. A swipe now pans, in both directions — sideways
+  movement was being discarded entirely. Pinch-to-zoom got its own sensitivity
+  rather than sharing the mouse wheel's, which had made a full pinch across the
+  trackpad worth a 27% change in zoom. A mouse wheel behaves exactly as it did.
+- The wheel pan/zoom toggle now appears on the story graph as well as the
+  moodboard. The setting was always shared between them, but only the moodboard
+  offered a way to change it.
+
 ## 2.0.0
 
 The first public release.
