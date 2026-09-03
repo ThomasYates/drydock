@@ -567,7 +567,7 @@ export default function Moodboard({ projectId, boardId }) {
           <button onClick={() => view.zoomToCentre(1.25)} title="Zoom in">+</button>
           <button onClick={fitAll} title="Fit everything on screen"><Icon.Fit /></button>
           <button className={view.wheelZoom ? '' : 'on'} onClick={view.toggleWheel}
-            title={view.wheelZoom ? 'Wheel zooms — click to make it pan' : 'Wheel pans — click to make it zoom'}>
+            title={view.wheelZoom ? 'Mouse wheel zooms — click to make it pan' : 'Mouse wheel pans — click to make it zoom'}>
             {view.wheelZoom ? '⌖' : '✥'}
           </button>
         </div>

@@ -4,6 +4,34 @@ const MIN_K = 0.03;
 const MAX_K = 6;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// How fast each gesture zooms. A wheel notch reports a deltaY of about 100, a
+// pinch reports single digits, so one rate cannot serve both.
+const WHEEL_RATE = 0.0016;
+const PINCH_RATE = 0.01;
+const LINE_PX = 18;
+
+// Once a gesture has been recognised, later events keep the same answer for
+// this long. A swipe starts small and speeds up, and without this the tail of
+// a fast flick gets mistaken for a wheel halfway through the gesture.
+const BURST_MS = 250;
+
+/**
+ * A mouse wheel and a two-finger swipe both arrive as `wheel` events, but they
+ * mean different things: a notch is a request to zoom, a swipe is a request to
+ * move the canvas. Nothing on the event says which device sent it, so this
+ * goes on the shape of it — notches are large whole numbers with no sideways
+ * travel, a swipe is a stream of small, often fractional deltas.
+ */
+function looksLikeWheel(e) {
+  if (e.deltaMode !== 0) return true;            // Firefox reports a mouse in lines
+  if (e.deltaX !== 0) return false;              // sideways travel means a trackpad
+  // Chrome and Safari still fill in the old wheelDelta, and a real wheel always
+  // lands on a multiple of 120 there.
+  const legacy = Math.abs(e.wheelDeltaY ?? 0);
+  if (legacy) return legacy >= 120 && legacy % 120 === 0;
+  return Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40;
+}
+
 export function useViewport(ref, storageKey) {
   const [vp, setVp] = useState(() => {
     try {
@@ -81,18 +109,32 @@ export function useViewport(ref, storageKey) {
   }, [rect]);
 
   // wheel: needs a non-passive listener to stop the page scrolling
+  const gesture = useRef({ wheel: true, at: -Infinity });
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
     const onWheel = (e) => {
       e.preventDefault();
-      const pinch = e.ctrlKey || e.metaKey;
-      if (pinch || wheelZoom) {
-        const step = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaY;
-        zoomAt(e.clientX, e.clientY, Math.exp(-step * 0.0016));
-      } else {
-        setVp((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
+
+      // Both platforms report a pinch as ctrl held down with a wheel event, and
+      // a pinch is always a zoom whichever way the wheel is set.
+      if (e.ctrlKey || e.metaKey) {
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * PINCH_RATE));
+        return;
       }
+
+      const wheel = e.timeStamp - gesture.current.at < BURST_MS
+        ? gesture.current.wheel
+        : looksLikeWheel(e);
+      gesture.current = { wheel, at: e.timeStamp };
+
+      if (wheel && wheelZoom) {
+        const step = e.deltaMode === 1 ? e.deltaY * LINE_PX : e.deltaY;
+        zoomAt(e.clientX, e.clientY, Math.exp(-step * WHEEL_RATE));
+        return;
+      }
+      const px = e.deltaMode === 1 ? LINE_PX : 1;
+      setVp((v) => ({ ...v, x: v.x - e.deltaX * px, y: v.y - e.deltaY * px }));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);

@@ -756,6 +756,10 @@ function GraphPage({ graphId, threads, onOpen, onThreadsChanged, projectId }) {
           <button onClick={() => view.resetZoom()}>1:1</button>
           <button onClick={() => view.zoomToCentre(1.25)}>+</button>
           <button onClick={fitAll} title="Fit everything on screen"><Icon.Fit /></button>
+          <button className={view.wheelZoom ? '' : 'on'} onClick={view.toggleWheel}
+            title={view.wheelZoom ? 'Mouse wheel zooms — click to make it pan' : 'Mouse wheel pans — click to make it zoom'}>
+            {view.wheelZoom ? '⌖' : '✥'}
+          </button>
         </div>
 
         {selEdge && (
