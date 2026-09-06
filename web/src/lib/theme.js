@@ -1,6 +1,6 @@
 import { DEFAULT_FONT, fontStack } from './fonts.js';
 
-export const DEFAULT_PREFS = { theme: 'dark', accent: '#e2a445', uiFont: DEFAULT_FONT };
+export const DEFAULT_PREFS = { theme: 'dark', accent: '#e2a445', uiFont: DEFAULT_FONT, trackpadGlide: 45 };
 
 export const ACCENTS = [
   { name: 'Brass', value: '#e2a445' },

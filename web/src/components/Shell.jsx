@@ -66,6 +66,7 @@ export default function Shell() {
               <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setMenu(false)} />
               <div className="card" style={{ position: 'absolute', right: 0, top: 38, width: 190, padding: 5, zIndex: 41 }}>
                 <Link className="tab" style={{ width: '100%' }} to="/account" onClick={() => setMenu(false)}><Icon.User /> Account</Link>
+                <Link className="tab" style={{ width: '100%' }} to="/settings" onClick={() => setMenu(false)}><Icon.Gear /> Settings</Link>
                 {user.isAdmin && <Link className="tab" style={{ width: '100%' }} to="/admin" onClick={() => setMenu(false)}><Icon.Users /> People</Link>}
                 <button className="tab" style={{ width: '100%' }} onClick={signOut}><Icon.Back /> Sign out</button>
                 <div style={{ borderTop: '1px solid var(--line-soft)', margin: '5px 0 0', padding: '7px 11px 3px' }}>

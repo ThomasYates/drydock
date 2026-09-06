@@ -7,7 +7,7 @@ export const COOKIE = 'drydock_sid';
 export const hash = (pw) => bcrypt.hashSync(pw, 11);
 export const verify = (pw, h) => bcrypt.compareSync(pw, h);
 
-export const DEFAULT_PREFS = { theme: 'dark', accent: '#e2a445', uiFont: 'archivo' };
+export const DEFAULT_PREFS = { theme: 'dark', accent: '#e2a445', uiFont: 'archivo', trackpadGlide: 45 };
 
 export function readPrefs(raw) {
   try { return { ...DEFAULT_PREFS, ...JSON.parse(raw || '{}') }; }

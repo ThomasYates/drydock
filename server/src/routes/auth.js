@@ -88,11 +88,16 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 r.post('/prefs', requireAuth, (req, res) => {
   const current = readPrefs(req.user.prefs);
   const { theme, accent } = req.body || {};
-  const { uiFont } = req.body || {};
+  const { uiFont, trackpadGlide } = req.body || {};
+  const glide = Number(trackpadGlide);
   const next = {
     theme: ['dark', 'light'].includes(theme) ? theme : current.theme,
     accent: HEX.test(accent || '') ? accent : current.accent,
     uiFont: /^[a-z0-9-]{1,32}$/.test(uiFont || '') ? uiFont : current.uiFont,
+    // a percentage, so anything outside 0-100 is a mistake rather than a choice
+    trackpadGlide: Number.isFinite(glide)
+      ? Math.round(Math.min(100, Math.max(0, glide)))
+      : current.trackpadGlide,
   };
   db.prepare('UPDATE users SET prefs = ? WHERE id = ?').run(JSON.stringify(next), req.user.id);
   res.json({ prefs: next });

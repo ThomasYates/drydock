@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSession } from './session.js';
 
 const MIN_K = 0.03;
 const MAX_K = 6;
@@ -14,6 +15,30 @@ const LINE_PX = 18;
 // this long. A swipe starts small and speeds up, and without this the tail of
 // a fast flick gets mistaken for a wheel halfway through the gesture.
 const BURST_MS = 250;
+
+// How far a two-finger swipe carries the canvas, and how long it keeps moving
+// once the fingers have gone. macOS carries on sending wheel events after the
+// hand has left the trackpad, and at 1:1 that tail throws an infinite canvas a
+// very long way — a page has edges to run into, a canvas does not.
+//
+// Scaling every event by the same amount is no good: it shortens the distance
+// but leaves the drift running for exactly as long, so the canvas still feels
+// like it is getting away from you. What has to shrink is the tail.
+const PAN_GAIN = 0.9;
+
+// Telling the tail apart from an ordinary slow drag, with no flag on the event
+// to say the fingers have lifted. Two things have to hold. The gesture must
+// have been fast enough to have thrown anything — a deliberate drag runs at ten
+// or fifteen pixels an event, a flick is several times that — and the deltas
+// must have dropped clear of the biggest one so far.
+const COAST_PEAK = 30;
+const COAST_DROP = 0.6;
+
+// A coast only ever fades. Deltas climbing again means the fingers are back on
+// the trackpad, which starts a fresh gesture: without this the tail of one
+// swipe swallows the beginning of the next, and the canvas refuses to move
+// until you stop and let the burst lapse.
+const DRIVEN_RISE = 1.15;
 
 /**
  * A mouse wheel and a two-finger swipe both arrive as `wheel` events, but they
@@ -33,6 +58,11 @@ function looksLikeWheel(e) {
 }
 
 export function useViewport(ref, storageKey) {
+  // Set on the Settings page, kept per account. Trackpads only — a wheel has no
+  // coast, and damping one would just make a mouse feel broken.
+  // 0-100 on the Settings page, kept per account. Trackpads only — a wheel has
+  // no drift to rein in, and damping one would just make a mouse feel broken.
+  const glide = clamp((useSession()?.prefs?.trackpadGlide ?? 45) / 100, 0, 1);
   const [vp, setVp] = useState(() => {
     try {
       const raw = localStorage.getItem(`vp:${storageKey}`);
@@ -109,7 +139,7 @@ export function useViewport(ref, storageKey) {
   }, [rect]);
 
   // wheel: needs a non-passive listener to stop the page scrolling
-  const gesture = useRef({ wheel: true, at: -Infinity });
+  const gesture = useRef({ wheel: true, at: -Infinity, size: 0, peak: 0, coasting: false });
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
@@ -123,10 +153,17 @@ export function useViewport(ref, storageKey) {
         return;
       }
 
-      const wheel = e.timeStamp - gesture.current.at < BURST_MS
-        ? gesture.current.wheel
-        : looksLikeWheel(e);
-      gesture.current = { wheel, at: e.timeStamp };
+      const carried = e.timeStamp - gesture.current.at < BURST_MS;
+      const wheel = carried ? gesture.current.wheel : looksLikeWheel(e);
+
+      // A gesture is new if nothing preceded it, or if the deltas have picked
+      // back up — the one thing a coast never does.
+      const size = Math.hypot(e.deltaX, e.deltaY);
+      const fresh = !carried || size > gesture.current.size * DRIVEN_RISE;
+      const peak = fresh ? size : Math.max(gesture.current.peak, size);
+      const coasting = !fresh
+        && (gesture.current.coasting || (peak >= COAST_PEAK && size < peak * COAST_DROP));
+      gesture.current = { wheel, at: e.timeStamp, size, peak, coasting };
 
       if (wheel && wheelZoom) {
         const step = e.deltaMode === 1 ? e.deltaY * LINE_PX : e.deltaY;
@@ -134,11 +171,12 @@ export function useViewport(ref, storageKey) {
         return;
       }
       const px = e.deltaMode === 1 ? LINE_PX : 1;
-      setVp((v) => ({ ...v, x: v.x - e.deltaX * px, y: v.y - e.deltaY * px }));
+      const gain = wheel ? 1 : (coasting ? glide : PAN_GAIN);
+      setVp((v) => ({ ...v, x: v.x - e.deltaX * px * gain, y: v.y - e.deltaY * px * gain }));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [ref, zoomAt, wheelZoom]);
+  }, [ref, zoomAt, wheelZoom, glide]);
 
   // space held = temporary pan tool
   const spaceRef = useRef(false);

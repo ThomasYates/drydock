@@ -10,6 +10,7 @@ import Projects from './components/Projects.jsx';
 import ProjectView from './components/ProjectView.jsx';
 import Admin from './components/Admin.jsx';
 import Account from './components/Account.jsx';
+import Settings from './components/Settings.jsx';
 
 // paint the last known look before anything renders, so there is no flash
 applyTheme(cachedPrefs());
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/p/:projectId/*" element={<ProjectView />} />
           <Route path="/admin" element={state.user.isAdmin ? <Admin /> : <Navigate to="/" replace />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

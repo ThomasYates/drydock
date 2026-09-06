@@ -2,6 +2,19 @@
 
 Notable changes, newest first. This project follows [semantic versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- **A Settings page**, under your name in the top right, between Account and
+  People. Settings there are yours alone rather than the whole install's.
+- **Drift after a flick**, the first setting on it. Flick a moodboard or a story
+  graph on a trackpad and macOS keeps the canvas moving after your fingers have
+  gone, which on an infinite canvas travels further than anyone wants. This sets
+  how much of that to keep, from stopping dead to the full coast. Deliberate
+  swipes and slow adjustments are left alone at every setting, and so is a mouse
+  wheel.
+
 ## 2.0.1
 
 ### Fixed
