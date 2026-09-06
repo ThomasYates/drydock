@@ -60,18 +60,10 @@ export function useUpdateStatus({ poll = true } = {}) {
     return res;
   }, []);
 
-  /** Admin only: change which channel this install watches. */
-  const setChannel = useCallback(async (channel) => {
-    const res = await api.post('/api/updates/channel', { channel });
-    setStatus(res);
-    return res;
-  }, []);
-
   return {
     status,
     refresh,
     checkNow,
-    setChannel,
     dismiss,
     showBanner: !!status?.updateAvailable && status.latest !== dismissed,
   };

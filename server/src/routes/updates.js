@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAdmin, requireAuth } from '../auth.js';
-import { CHANNELS, checkForUpdates, readStatus, setChannel } from '../updates.js';
+import { checkForUpdates, readStatus } from '../updates.js';
 
 const r = Router();
 r.use(requireAuth);
@@ -34,26 +34,6 @@ r.post('/check', requireAdmin, async (_req, res) => {
   } catch (e) {
     console.error('forced update check failed', e);
     return res.status(502).json({ ...readStatus(), error: 'The check could not be completed.' });
-  }
-});
-
-/**
- * Which channel this install watches. Admin-only, and install-wide rather than
- * per account: it describes the container everyone is sharing, not a taste.
- * Switching goes and looks straight away, since the cached answer was about
- * the other channel and has just been thrown out.
- */
-r.post('/channel', requireAdmin, async (req, res) => {
-  const { channel } = req.body || {};
-  if (!CHANNELS.includes(channel)) {
-    return res.status(400).json({ error: `Channel must be one of: ${CHANNELS.join(', ')}.` });
-  }
-  setChannel(channel);
-  try {
-    return res.json(await checkForUpdates({ force: true }));
-  } catch (e) {
-    console.error('update check after channel switch failed', e);
-    return res.status(200).json(readStatus());
   }
 });
 

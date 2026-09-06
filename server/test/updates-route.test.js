@@ -1,7 +1,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, makeClient, setupAdmin } from '../test-utils/harness.js';
-import { checkForUpdates, readStatus, setChannel } from '../src/updates.js';
+import { channelFor, checkForUpdates, fetchLatestRelease, readStatus } from '../src/updates.js';
 
 let app;
 let api;
@@ -115,55 +115,44 @@ test('holding the check button down does not turn into a stream of requests', as
   assert.match(second.data.error, /Just checked/);
 });
 
-test('the channel starts on stable and only an admin can change it', async () => {
-  assert.equal(readStatus().channel, 'stable');
+test('a build follows the channel it was built on', () => {
+  assert.equal(channelFor('2.0.1'), 'stable');
+  assert.equal(channelFor('2.0.1-beta.a1b2c3d'), 'beta');
+  assert.equal(channelFor('2.0.1-BETA.a1b2c3d'), 'beta');
+  assert.equal(channelFor('2.1.0-rc.1'), 'stable', 'a release candidate is not the beta branch');
+  assert.equal(channelFor(undefined), 'stable');
 
-  const outsider = makeClient(app.base);
-  assert.equal((await outsider.post('/api/updates/channel', { channel: 'beta' })).status, 401);
-  assert.equal(readStatus().channel, 'stable');
-
-  assert.equal((await api.post('/api/updates/channel', { channel: 'nightly' })).status, 400);
+  // this build is a released one, so that is what it watches
   assert.equal(readStatus().channel, 'stable');
 });
 
-test('the beta channel reads the beta pre-release, and stable never sees it', async () => {
-  setChannel('stable');
-  await checkForUpdates({ force: true, fetchImpl: stub(release('2.0.0')) });
-  assert.equal(readStatus().latest, '2.0.0');
+test('the beta channel reads the beta pre-release, which stable never sees', async () => {
+  const asked = [];
+  const spy = (payload) => async (url) => {
+    asked.push(url);
+    return { ok: true, status: 200, json: async () => payload };
+  };
 
-  setChannel('beta');
-  // switching throws the stable answer away rather than leaving it on screen
-  assert.equal(readStatus().latest, null);
-  assert.equal(readStatus().checkedAt, null);
+  const beta = await fetchLatestRelease('ThomasYates/drydock', {
+    channel: 'beta',
+    fetchImpl: spy(betaRelease('2.0.1-beta.a1b2c3d')),
+  });
+  assert.match(asked[0], /\/releases\/tags\/beta$/);
+  assert.equal(beta.release.version, '2.0.1-beta.a1b2c3d');
 
-  const status = await checkForUpdates({ force: true, fetchImpl: stub(betaRelease('9.9.9-beta.abc1234')) });
-  assert.equal(status.channel, 'beta');
-  assert.equal(status.latest, '9.9.9-beta.abc1234');
-  assert.equal(status.updateAvailable, true);
-
-  setChannel('stable');
-  await checkForUpdates({ force: true, fetchImpl: stub(release('0.0.1')) });
-  assert.equal(readStatus().updateAvailable, false, 'an older release is not an update');
-});
-
-test('a beta offers anything that is not what is running, older or newer', async () => {
-  setChannel('beta');
-  const current = readStatus().current;
-
-  await checkForUpdates({ force: true, fetchImpl: stub(betaRelease(current)) });
-  assert.equal(readStatus().updateAvailable, false, 'the build already running is not an update');
-
-  // semver sorts a pre-release below its release, so the stable comparison
-  // would refuse this one; on beta, different is what counts
-  await checkForUpdates({ force: true, fetchImpl: stub(betaRelease(`${current}-beta.aaaaaaa`)) });
-  assert.equal(readStatus().updateAvailable, true);
-  setChannel('stable');
+  // the same payload on the stable channel is refused: it is a pre-release, and
+  // its tag is not a version at all
+  const stable = await fetchLatestRelease('ThomasYates/drydock', {
+    channel: 'stable',
+    fetchImpl: spy(betaRelease('2.0.1-beta.a1b2c3d')),
+  });
+  assert.match(asked[1], /\/releases\/latest$/);
+  assert.equal(stable.release, null);
 });
 
 test('a channel with nothing published yet is not an error', async () => {
-  setChannel('beta');
+  const before = readStatus().latest;
   const status = await checkForUpdates({ force: true, fetchImpl: stub({}, 404) });
-  assert.equal(status.latest, null);
-  assert.equal(status.error, null);
-  setChannel('stable');
+  assert.equal(status.error, null, 'nothing published is a normal state, not a failure');
+  assert.equal(status.latest, before, 'and it leaves the last known answer alone');
 });

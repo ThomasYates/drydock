@@ -22,41 +22,24 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const KEY_RELEASE = 'update.release';
 const KEY_CHECKED = 'update.checked_at';
 const KEY_ERROR = 'update.error';
-const KEY_CHANNEL = 'update.channel';
-
-/**
- * Which line of work this install follows. `stable` watches releases, the way
- * it always has. `beta` watches the branch that things go to before they are
- * promised to anyone, and is republished on every push to it.
- *
- * This only decides what gets watched and what the notice says. Taking an
- * update is still two commands on the host — the container cannot change the
- * image it was started from, and giving it the power to would mean handing the
- * web app the Docker socket.
- */
-export const CHANNELS = ['stable', 'beta'];
-
-export function readChannel() {
-  const stored = getSetting(KEY_CHANNEL);
-  return CHANNELS.includes(stored) ? stored : 'stable';
-}
-
-/** Switching throws away the cached answer: it describes the other channel. */
-export function setChannel(channel) {
-  if (!CHANNELS.includes(channel)) return readChannel();
-  if (channel !== readChannel()) {
-    setSetting(KEY_CHANNEL, channel);
-    setSetting(KEY_RELEASE, '');
-    setSetting(KEY_CHECKED, '');
-    setSetting(KEY_ERROR, '');
-  }
-  return channel;
-}
 
 const REPO_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 /** An owner/name pair and nothing else — this goes straight into a URL. */
 export const validRepo = (repo) => typeof repo === 'string' && REPO_RE.test(repo);
+
+/**
+ * Which line of work this build follows. It is not a setting, because it is not
+ * a decision: a build stamped `2.0.1-beta.a1b2c3d` came off the beta branch, so
+ * releases are the wrong thing for it to watch, and a released build has no
+ * business being offered a beta. The image already knows which it is.
+ *
+ * Either way this only decides what gets watched. Taking an update is still two
+ * commands on the host — the container cannot change the image it was started
+ * from, and giving it the power to would mean handing the web app the Docker
+ * socket.
+ */
+export const channelFor = (version) => (/-beta\b/i.test(String(version || '')) ? 'beta' : 'stable');
 
 export function config() {
   const repo = String(process.env.UPDATE_REPO || DEFAULT_REPO).trim();
@@ -64,7 +47,7 @@ export function config() {
   return {
     enabled: process.env.UPDATE_CHECK !== '0',
     repo,
-    channel: readChannel(),
+    channel: channelFor(VERSION),
     intervalMs: Math.max(1, Number.isFinite(hours) ? hours : 6) * 3_600_000,
   };
 }
