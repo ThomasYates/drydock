@@ -117,6 +117,46 @@ docker compose -f compose.build.yaml up -d --build
 The first build takes a few minutes — it compiles the frontend and builds
 `better-sqlite3` and `sharp` for your architecture.
 
+### Running the beta
+
+There is a second image that tracks the `beta` branch, where things go to be
+lived with before they reach a release. Save this as `compose.beta.yaml`:
+
+```yaml
+services:
+  drydock-beta:
+    image: ghcr.io/thomasyates/drydock:beta
+    container_name: drydock-beta
+    restart: unless-stopped
+    ports:
+      - "8788:8787"
+    environment:
+      TZ: Europe/London
+      # A beta is already ahead of the newest release, so the update notice
+      # has nothing useful to say.
+      UPDATE_CHECK: "0"
+    volumes:
+      - drydock-beta-data:/data
+
+volumes:
+  drydock-beta-data:
+```
+
+Then `docker compose -f compose.beta.yaml up -d`, and open it on port 8788.
+
+It is on its own port, its own container name and — the part that matters — its
+own volume, so it can sit alongside a stable install without the two ever seeing
+each other's data. Every push to `beta` republishes the image, so
+`docker compose -f compose.beta.yaml pull && docker compose -f compose.beta.yaml up -d`
+brings you to whatever is on the branch. The version in the account menu reads
+like `2.0.1-beta.a1b2c3d`, which is the commit it was built from.
+
+Two things to be clear about. A beta will occasionally be broken, which is what
+it is for. And it must never be pointed at a stable install's volume: a beta can
+carry database changes that a released version will not understand, and there is
+no going back. Moving a project between the two is an export from one and an
+import into the other, on the Projects page.
+
 ---
 
 ## Settings

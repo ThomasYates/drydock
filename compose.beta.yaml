@@ -1,0 +1,45 @@
+# The beta channel.
+#
+# This tracks the `beta` branch: every push to it republishes the image, so a
+# `docker compose pull && docker compose up -d` brings you to whatever is on the
+# branch right now. It is for trying things before they go to main, and it will
+# occasionally be broken — that is the point of it.
+#
+# Everything here is deliberately separate from a stable install: its own
+# container name, its own port, and above all its own volume. Run it alongside
+# the real one and the two never see each other's data.
+#
+#   docker compose -f compose.beta.yaml up -d
+#
+# Moving a project between the two is an export from one and an import into the
+# other, on the Projects page. Do not point this at a stable install's volume:
+# a beta can carry database changes that a released version will not understand.
+services:
+  drydock-beta:
+    image: ghcr.io/thomasyates/drydock:beta
+    container_name: drydock-beta
+    restart: unless-stopped
+    ports:
+      # 8788 on the host, so a stable install can keep 8787.
+      - "8788:8787"
+    environment:
+      # Behind a Cloudflare Tunnel these two make the session cookie stick.
+      TRUST_PROXY: "1"
+      SECURE_COOKIE: "1"
+
+      SESSION_DAYS: "30"
+
+      IMAGE_MAX_EDGE: "2200"
+      IMAGE_QUALITY: "78"
+      MAX_UPLOAD_MB: "40"
+
+      # A beta is already ahead of the newest release, so the update notice has
+      # nothing useful to say and would only ever be wrong.
+      UPDATE_CHECK: "0"
+
+      TZ: "Europe/London"
+    volumes:
+      - drydock-beta-data:/data
+
+volumes:
+  drydock-beta-data:

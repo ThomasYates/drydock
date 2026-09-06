@@ -1,0 +1,112 @@
+name: Beta
+
+# Every push to beta republishes the beta image, so an install pointed at
+# ghcr.io/thomasyates/drydock:beta is always one `docker compose pull` behind
+# whatever is on the branch. Nothing here creates a GitHub release: the update
+# check reads releases, and a beta is not something to offer anyone running a
+# stable install.
+on:
+  push:
+    branches: [beta]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# A newer push makes the build in progress pointless.
+concurrency:
+  group: beta-image
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and publish the beta image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            web/package-lock.json
+
+      - name: Install
+        run: |
+          npm ci
+          npm --prefix server ci
+          npm --prefix web ci
+
+      # A beta is for finding out whether something feels right, not for finding
+      # out whether it runs. Broken code does not get published.
+      - name: Lint and test
+        run: npm run check
+
+      # Stamp the build so the account menu says which beta you are looking at.
+      # This is not committed — it only ever exists inside the image.
+      - name: Stamp the version
+        id: stamp
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")-beta.$(git rev-parse --short HEAD)"
+          VERSION="$version" node -e '
+            const fs = require("fs");
+            const version = process.env.VERSION;
+            for (const dir of [".", "server", "web"]) {
+              for (const name of ["package.json", "package-lock.json"]) {
+                const path = `${dir}/${name}`;
+                if (!fs.existsSync(path)) continue;
+                const json = JSON.parse(fs.readFileSync(path, "utf8"));
+                json.version = version;
+                if (json.packages && json.packages[""]) json.packages[""].version = version;
+                fs.writeFileSync(path, JSON.stringify(json, null, 2) + "\n");
+              }
+            }
+          '
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "built $version"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ghcr.io requires a lowercase image name; a GitHub account is not
+      # necessarily lowercase.
+      - name: Work out the image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      # `beta` moves with the branch. The sha tag is there so a build that turns
+      # out to be worth keeping can be pinned, and so one that breaks something
+      # can be stepped back from.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:beta
+            ${{ steps.image.outputs.name }}:${{ steps.stamp.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Say what landed
+        run: |
+          {
+            echo "### Beta published"
+            echo
+            echo '`${{ steps.image.outputs.name }}:beta` is now ${{ steps.stamp.outputs.version }}.'
+            echo
+            echo 'Pull it with `docker compose pull && docker compose up -d`.'
+          } >> "$GITHUB_STEP_SUMMARY"
