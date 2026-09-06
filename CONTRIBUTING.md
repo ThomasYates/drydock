@@ -75,14 +75,36 @@ Small and focused. The description should say what changed and why. Anything
 that belongs in release notes, or that changes how someone runs Drydock, should
 say so explicitly.
 
+## Branches
+
+`main` is what has been released. `beta` is what is being lived with. Work goes
+on a branch of its own, named for the thing it does, and opens a pull request
+into `beta` rather than into `main`.
+
+```
+feature branch  ->  beta  ->  main  ->  tag  ->  release
+```
+
+Every push to `beta` republishes `ghcr.io/thomasyates/drydock:beta` and rewrites
+the `beta` pre-release, which is how an install set to the beta channel finds
+out there is something new. So anything merged there can be used in earnest on a
+real install before it is promised to anyone. When what has gathered on `beta`
+is worth shipping, it goes to `main` as one pull request, and that is what gets
+tagged.
+
+The point of the middle step is that a release stops being the first time
+something is used properly. It also means several changes can be tried together,
+rather than every fix asking everyone to update.
+
 ## Releasing
 
 Maintainers only:
 
-1. Bump the version in `package.json`, `server/package.json` and
+1. Merge `beta` into `main`.
+2. Bump the version in `package.json`, `server/package.json` and
    `web/package.json`. All three must match — the release workflow checks.
-2. Update `CHANGELOG.md`.
-3. Tag it: `git tag v2.1.0 && git push origin v2.1.0`.
+3. Update `CHANGELOG.md`.
+4. Tag it: `git tag v2.1.0 && git push origin v2.1.0`.
 
 That builds and publishes the image to GHCR and creates the GitHub release.
 Drydock's own update check reads that release, so a version without one is a

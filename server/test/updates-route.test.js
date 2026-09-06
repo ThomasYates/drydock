@@ -1,7 +1,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, makeClient, setupAdmin } from '../test-utils/harness.js';
-import { checkForUpdates, readStatus } from '../src/updates.js';
+import { channelFor, checkForUpdates, fetchLatestRelease, readStatus } from '../src/updates.js';
 
 let app;
 let api;
@@ -25,6 +25,16 @@ const stub = (payload, status = 200) => async () => ({
   ok: status >= 200 && status < 300,
   status,
   json: async () => payload,
+});
+
+/** What the beta workflow writes: one pre-release whose name is the build. */
+const betaRelease = (version) => ({
+  tag_name: 'beta',
+  name: version,
+  prerelease: true,
+  html_url: 'https://github.com/ThomasYates/drydock/releases/tag/beta',
+  body: 'The current build of the beta branch.',
+  published_at: '2026-04-02T09:00:00Z',
 });
 
 test('the status endpoint needs an account', async () => {
@@ -103,4 +113,46 @@ test('holding the check button down does not turn into a stream of requests', as
   assert.ok(first.status === 200 || first.status === 429);
   assert.equal(second.status, 429, 'the second one straight after is refused');
   assert.match(second.data.error, /Just checked/);
+});
+
+test('a build follows the channel it was built on', () => {
+  assert.equal(channelFor('2.0.1'), 'stable');
+  assert.equal(channelFor('2.0.1-beta.a1b2c3d'), 'beta');
+  assert.equal(channelFor('2.0.1-BETA.a1b2c3d'), 'beta');
+  assert.equal(channelFor('2.1.0-rc.1'), 'stable', 'a release candidate is not the beta branch');
+  assert.equal(channelFor(undefined), 'stable');
+
+  // this build is a released one, so that is what it watches
+  assert.equal(readStatus().channel, 'stable');
+});
+
+test('the beta channel reads the beta pre-release, which stable never sees', async () => {
+  const asked = [];
+  const spy = (payload) => async (url) => {
+    asked.push(url);
+    return { ok: true, status: 200, json: async () => payload };
+  };
+
+  const beta = await fetchLatestRelease('ThomasYates/drydock', {
+    channel: 'beta',
+    fetchImpl: spy(betaRelease('2.0.1-beta.a1b2c3d')),
+  });
+  assert.match(asked[0], /\/releases\/tags\/beta$/);
+  assert.equal(beta.release.version, '2.0.1-beta.a1b2c3d');
+
+  // the same payload on the stable channel is refused: it is a pre-release, and
+  // its tag is not a version at all
+  const stable = await fetchLatestRelease('ThomasYates/drydock', {
+    channel: 'stable',
+    fetchImpl: spy(betaRelease('2.0.1-beta.a1b2c3d')),
+  });
+  assert.match(asked[1], /\/releases\/latest$/);
+  assert.equal(stable.release, null);
+});
+
+test('a channel with nothing published yet is not an error', async () => {
+  const before = readStatus().latest;
+  const status = await checkForUpdates({ force: true, fetchImpl: stub({}, 404) });
+  assert.equal(status.error, null, 'nothing published is a normal state, not a failure');
+  assert.equal(status.latest, before, 'and it leaves the last known answer alone');
 });

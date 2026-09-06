@@ -135,7 +135,7 @@ Every one of these is optional.
 | `MAX_UPLOAD_MB` | `40` | Per-file upload ceiling |
 | `MAX_IMPORT_MB` | `512` | Ceiling for an imported archive |
 | `UPDATE_CHECK` | `1` | Set to `0` to never contact GitHub |
-| `UPDATE_REPO` | `ThomasYates/drydock` | Which releases to watch |
+| `UPDATE_REPO` | `ThomasYates/drydock` | Which repository to watch |
 | `UPDATE_CHECK_HOURS` | `6` | How often to look |
 
 `TRUST_PROXY` and `SECURE_COOKIE` are separate on purpose. `TRUST_PROXY` says
@@ -459,6 +459,36 @@ web/src/
 
 Both canvases run on the same viewport engine, so panning, zooming and
 fit-to-content behave identically in each.
+
+---
+
+## The beta
+
+Alongside the releases there is a `beta` branch, where things go to be lived
+with before they are promised to anyone. Every push to it publishes an image, so
+it moves faster than releases do and will occasionally be broken.
+
+To follow it, change one line in your `compose.yaml`:
+
+```yaml
+image: ghcr.io/thomasyates/drydock:beta
+```
+
+then `docker compose pull && docker compose up -d`, which is the same pair of
+commands as any other update. Going back is the same edit in reverse, with a
+version in place of `beta`.
+
+A beta build watches the beta branch for you. It knows what it is — the account
+menu reads something like `2.0.1-beta.a1b2c3d`, the commit it was built from —
+so it checks for new betas rather than for releases, and a released build is
+never offered one. There is nothing to configure.
+
+One warning, and it is the only one that matters. A beta can carry database
+changes that a released version does not understand, and the migrations only
+run forward, so going from a beta back to a release is not something a `/data`
+volume survives. If that would hurt, run the beta as a second container with its
+own volume and its own port, and move work between the two with the export and
+import on the Projects page.
 
 ---
 

@@ -144,9 +144,21 @@ function Updates() {
         </p>
       ) : (
         <>
-          <p className="hint" style={{ margin: '12px 0 0' }}>
-            Watching <span className="mono">{status?.repo || 'the release feed'}</span>. Last
-            checked {checked}. Nothing is sent — it is one read of the public releases list.
+          {status?.channel === 'beta' ? (
+            <p className="hint" style={{ margin: '12px 0 0' }}>
+              This is a beta build, so it watches the beta branch rather than releases.
+              That branch is rebuilt on every push to it and will occasionally be broken.
+            </p>
+          ) : (
+            <p className="hint" style={{ margin: '12px 0 0' }}>
+              Watching releases. There is also a beta channel, on its own image tag — the
+              README says how to switch to it.
+            </p>
+          )}
+
+          <p className="hint" style={{ margin: '10px 0 0' }}>
+            Reading <span className="mono">{status?.repo || 'the release feed'}</span>. Last
+            checked {checked}. Nothing is sent — it is one read of a public URL.
           </p>
 
           {status?.error && <div className="error" style={{ marginTop: 12 }}>{status.error}</div>}
@@ -168,8 +180,8 @@ function Updates() {
           {status && !status.updateAvailable && !status.error && status.checkedAt && (
             <p className="hint" style={{ margin: '10px 0 0', color: status.latest ? 'var(--green)' : undefined }}>
               {status.latest
-                ? 'This is the newest release.'
-                : 'That repository has not published a release yet, so there is nothing to compare against.'}
+                ? (status.channel === 'beta' ? 'This is the newest beta.' : 'This is the newest release.')
+                : 'Nothing has been published on this channel yet, so there is nothing to compare against.'}
             </p>
           )}
         </>
