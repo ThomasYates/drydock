@@ -141,6 +141,25 @@ test('preferences only accept values the app knows about', async () => {
   assert.match(res.data.prefs.uiFont, /^[a-z0-9-]{1,32}$/);
 });
 
+test('trackpad glide is kept inside 0-100', async () => {
+  assert.equal((await api.post('/api/auth/prefs', { trackpadGlide: 70 })).data.prefs.trackpadGlide, 70);
+  assert.equal((await api.post('/api/auth/prefs', { trackpadGlide: 0 })).data.prefs.trackpadGlide, 0);
+  assert.equal((await api.post('/api/auth/prefs', { trackpadGlide: 940 })).data.prefs.trackpadGlide, 100);
+  assert.equal((await api.post('/api/auth/prefs', { trackpadGlide: -40 })).data.prefs.trackpadGlide, 0);
+  assert.equal((await api.post('/api/auth/prefs', { trackpadGlide: 12.6 })).data.prefs.trackpadGlide, 13);
+
+  // nonsense leaves whatever was already set alone rather than resetting it
+  await api.post('/api/auth/prefs', { trackpadGlide: 55 });
+  assert.equal((await api.post('/api/auth/prefs', { trackpadGlide: 'lots' })).data.prefs.trackpadGlide, 55);
+});
+
+test('a glide setting survives signing out and back in', async () => {
+  await api.post('/api/auth/prefs', { trackpadGlide: 20 });
+  const client = makeClient(app.base);
+  await client.post('/api/auth/login', { username: ADMIN.username, password: ADMIN.password });
+  assert.equal((await client.get('/api/auth/state')).data.user.prefs.trackpadGlide, 20);
+});
+
 test('signing out clears the cookie', async () => {
   const client = makeClient(app.base);
   await client.post('/api/auth/login', { username: ADMIN.username, password: ADMIN.password });
