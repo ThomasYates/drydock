@@ -117,45 +117,39 @@ docker compose -f compose.build.yaml up -d --build
 The first build takes a few minutes — it compiles the frontend and builds
 `better-sqlite3` and `sharp` for your architecture.
 
-### Running the beta
+### The beta channel
 
-There is a second image that tracks the `beta` branch, where things go to be
-lived with before they reach a release. Save this as `compose.beta.yaml`:
+There is a second line of work: the `beta` branch, where things go to be lived
+with before they reach a release. Every push to it republishes an image, so it
+moves faster than releases do and will occasionally be broken.
+
+Joining it is two things. Point your compose file at the beta tag:
 
 ```yaml
-services:
-  drydock-beta:
-    image: ghcr.io/thomasyates/drydock:beta
-    container_name: drydock-beta
-    restart: unless-stopped
-    ports:
-      - "8788:8787"
-    environment:
-      TZ: Europe/London
-      # A beta is already ahead of the newest release, so the update notice
-      # has nothing useful to say.
-      UPDATE_CHECK: "0"
-    volumes:
-      - drydock-beta-data:/data
-
-volumes:
-  drydock-beta-data:
+image: ghcr.io/thomasyates/drydock:beta
 ```
 
-Then `docker compose -f compose.beta.yaml up -d`, and open it on port 8788.
+Then pull it, and under **People and settings** set the update channel to
+**Beta**. From then on it is the same two commands as any other update, and
+Drydock tells you when a new beta has been built:
 
-It is on its own port, its own container name and — the part that matters — its
-own volume, so it can sit alongside a stable install without the two ever seeing
-each other's data. Every push to `beta` republishes the image, so
-`docker compose -f compose.beta.yaml pull && docker compose -f compose.beta.yaml up -d`
-brings you to whatever is on the branch. The version in the account menu reads
-like `2.0.1-beta.a1b2c3d`, which is the commit it was built from.
+```bash
+docker compose pull && docker compose up -d
+```
 
-Two things to be clear about. A beta will occasionally be broken, which is what
-it is for. And it must never be pointed at a stable install's volume: a beta can
-carry database changes that a released version will not understand, and there is
-no going back. Moving a project between the two is an export from one and an
-import into the other, on the Projects page.
+The setting decides what gets watched and what the notice says. It cannot
+change the image the container was started from — nothing in here can, which is
+why the tag has to be set once by hand. Going back to releases is the reverse:
+set the channel to **Stable** and put the tag back to a version.
+
+The account menu shows which build you are on, like `2.0.1-beta.a1b2c3d`, so a
+beta always says so.
+
+A word of warning. A beta can carry database changes that a released version
+does not understand, and the migrations only run forward, so moving from a beta
+back to a release is not something `/data` will survive. If that matters, run
+the beta as a second container with its own volume and its own port, and move
+work between the two with the export and import on the Projects page.
 
 ---
 
@@ -175,8 +169,12 @@ Every one of these is optional.
 | `MAX_UPLOAD_MB` | `40` | Per-file upload ceiling |
 | `MAX_IMPORT_MB` | `512` | Ceiling for an imported archive |
 | `UPDATE_CHECK` | `1` | Set to `0` to never contact GitHub |
-| `UPDATE_REPO` | `ThomasYates/drydock` | Which releases to watch |
+| `UPDATE_REPO` | `ThomasYates/drydock` | Which repository to watch |
 | `UPDATE_CHECK_HOURS` | `6` | How often to look |
+
+Whether those checks watch releases or the beta branch is not an environment
+variable — it is a setting under People and settings, so it can be changed
+without touching the compose file. See [the beta channel](#the-beta-channel).
 
 `TRUST_PROXY` and `SECURE_COOKIE` are separate on purpose. `TRUST_PROXY` says
 "believe the `X-Forwarded-For` header"; `SECURE_COOKIE` says "there is TLS in

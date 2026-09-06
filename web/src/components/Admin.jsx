@@ -101,7 +101,7 @@ export default function Admin() {
  * checks, and tells you what to run.
  */
 function Updates() {
-  const { status, checkNow } = useUpdateStatus({ poll: false });
+  const { status, checkNow, setChannel } = useUpdateStatus({ poll: false });
   const [busy, setBusy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const say = useToast();
@@ -113,6 +113,20 @@ function Updates() {
       if (next.updateAvailable) say(`Drydock ${next.latest} is available`);
       else if (next.error) say(next.error);
       else say(`You are on the latest version (${next.current})`);
+    } catch (e) {
+      say(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function switchTo(channel) {
+    if (channel === status?.channel) return;
+    setBusy(true);
+    try {
+      const next = await setChannel(channel);
+      if (next.updateAvailable) say(`On ${channel} — ${next.latest} is available`);
+      else say(`Now watching the ${channel} channel`);
     } catch (e) {
       say(e.message);
     } finally {
@@ -144,9 +158,33 @@ function Updates() {
         </p>
       ) : (
         <>
-          <p className="hint" style={{ margin: '12px 0 0' }}>
-            Watching <span className="mono">{status?.repo || 'the release feed'}</span>. Last
-            checked {checked}. Nothing is sent — it is one read of the public releases list.
+          <div className="field" style={{ marginTop: 14 }}>
+            <label>Channel</label>
+            <div className="row" style={{ gap: 6 }}>
+              <button className={`btn sm${status?.channel === 'stable' ? ' primary' : ''}`}
+                disabled={busy} onClick={() => switchTo('stable')}>Stable</button>
+              <button className={`btn sm${status?.channel === 'beta' ? ' primary' : ''}`}
+                disabled={busy} onClick={() => switchTo('beta')}>Beta</button>
+            </div>
+          </div>
+
+          {status?.channel === 'beta' ? (
+            <p className="hint" style={{ margin: '10px 0 0' }}>
+              Watching the beta branch, which is rebuilt on every push to it and will
+              occasionally be broken. Your compose file has to be pulling
+              <code> ghcr.io/thomasyates/drydock:beta</code> for these to arrive — the container
+              cannot change the image it was started from.
+            </p>
+          ) : (
+            <p className="hint" style={{ margin: '10px 0 0' }}>
+              Watching releases. Beta follows the branch things go to before they are promised
+              to anyone, and needs the <code>:beta</code> image tag.
+            </p>
+          )}
+
+          <p className="hint" style={{ margin: '10px 0 0' }}>
+            Reading <span className="mono">{status?.repo || 'the release feed'}</span>. Last
+            checked {checked}. Nothing is sent — it is one read of a public URL.
           </p>
 
           {status?.error && <div className="error" style={{ marginTop: 12 }}>{status.error}</div>}
@@ -168,8 +206,8 @@ function Updates() {
           {status && !status.updateAvailable && !status.error && status.checkedAt && (
             <p className="hint" style={{ margin: '10px 0 0', color: status.latest ? 'var(--green)' : undefined }}>
               {status.latest
-                ? 'This is the newest release.'
-                : 'That repository has not published a release yet, so there is nothing to compare against.'}
+                ? (status.channel === 'beta' ? 'This is the newest beta.' : 'This is the newest release.')
+                : 'Nothing has been published on this channel yet, so there is nothing to compare against.'}
             </p>
           )}
         </>

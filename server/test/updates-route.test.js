@@ -1,7 +1,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, makeClient, setupAdmin } from '../test-utils/harness.js';
-import { checkForUpdates, readStatus } from '../src/updates.js';
+import { checkForUpdates, readStatus, setChannel } from '../src/updates.js';
 
 let app;
 let api;
@@ -25,6 +25,16 @@ const stub = (payload, status = 200) => async () => ({
   ok: status >= 200 && status < 300,
   status,
   json: async () => payload,
+});
+
+/** What the beta workflow writes: one pre-release whose name is the build. */
+const betaRelease = (version) => ({
+  tag_name: 'beta',
+  name: version,
+  prerelease: true,
+  html_url: 'https://github.com/ThomasYates/drydock/releases/tag/beta',
+  body: 'The current build of the beta branch.',
+  published_at: '2026-04-02T09:00:00Z',
 });
 
 test('the status endpoint needs an account', async () => {
@@ -103,4 +113,57 @@ test('holding the check button down does not turn into a stream of requests', as
   assert.ok(first.status === 200 || first.status === 429);
   assert.equal(second.status, 429, 'the second one straight after is refused');
   assert.match(second.data.error, /Just checked/);
+});
+
+test('the channel starts on stable and only an admin can change it', async () => {
+  assert.equal(readStatus().channel, 'stable');
+
+  const outsider = makeClient(app.base);
+  assert.equal((await outsider.post('/api/updates/channel', { channel: 'beta' })).status, 401);
+  assert.equal(readStatus().channel, 'stable');
+
+  assert.equal((await api.post('/api/updates/channel', { channel: 'nightly' })).status, 400);
+  assert.equal(readStatus().channel, 'stable');
+});
+
+test('the beta channel reads the beta pre-release, and stable never sees it', async () => {
+  setChannel('stable');
+  await checkForUpdates({ force: true, fetchImpl: stub(release('2.0.0')) });
+  assert.equal(readStatus().latest, '2.0.0');
+
+  setChannel('beta');
+  // switching throws the stable answer away rather than leaving it on screen
+  assert.equal(readStatus().latest, null);
+  assert.equal(readStatus().checkedAt, null);
+
+  const status = await checkForUpdates({ force: true, fetchImpl: stub(betaRelease('9.9.9-beta.abc1234')) });
+  assert.equal(status.channel, 'beta');
+  assert.equal(status.latest, '9.9.9-beta.abc1234');
+  assert.equal(status.updateAvailable, true);
+
+  setChannel('stable');
+  await checkForUpdates({ force: true, fetchImpl: stub(release('0.0.1')) });
+  assert.equal(readStatus().updateAvailable, false, 'an older release is not an update');
+});
+
+test('a beta offers anything that is not what is running, older or newer', async () => {
+  setChannel('beta');
+  const current = readStatus().current;
+
+  await checkForUpdates({ force: true, fetchImpl: stub(betaRelease(current)) });
+  assert.equal(readStatus().updateAvailable, false, 'the build already running is not an update');
+
+  // semver sorts a pre-release below its release, so the stable comparison
+  // would refuse this one; on beta, different is what counts
+  await checkForUpdates({ force: true, fetchImpl: stub(betaRelease(`${current}-beta.aaaaaaa`)) });
+  assert.equal(readStatus().updateAvailable, true);
+  setChannel('stable');
+});
+
+test('a channel with nothing published yet is not an error', async () => {
+  setChannel('beta');
+  const status = await checkForUpdates({ force: true, fetchImpl: stub({}, 404) });
+  assert.equal(status.latest, null);
+  assert.equal(status.error, null);
+  setChannel('stable');
 });

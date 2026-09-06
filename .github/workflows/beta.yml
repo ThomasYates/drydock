@@ -11,7 +11,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # contents: write is for the `beta` pre-release below, which is how an install
+  # on the beta channel finds out a new build exists.
+  contents: write
   packages: write
 
 # A newer push makes the build in progress pointless.
@@ -101,6 +103,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Drydock's beta channel reads this. One pre-release, rewritten in place,
+      # rather than a new one per push: the releases page stays about actual
+      # releases, and pre-release keeps it away from anyone on stable. It is
+      # written only after the image is pushed, so being told about a build
+      # always means the build is there to pull.
+      - name: Publish the beta release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.stamp.outputs.version }}
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: |
+          set -euo pipefail
+
+          {
+            printf 'The current build of the `beta` branch.\n\n'
+            printf 'Pull it with:\n\n'
+            printf '```bash\n'
+            printf 'docker compose pull && docker compose up -d\n'
+            printf '```\n\n'
+            printf 'Image: `%s:beta`, also pinned as `%s:%s`.\n\n' "$IMAGE" "$IMAGE" "$VERSION"
+            printf 'Built from %s.\n\n' "$GITHUB_SHA"
+            printf 'A beta is rebuilt on every push to the branch and will occasionally be\n'
+            printf 'broken. Keep it away from data you care about.\n'
+          } > notes.md
+
+          # the tag has to move with the branch, and a release cannot be
+          # repointed, so it is replaced rather than edited
+          gh release delete beta --yes --cleanup-tag 2>/dev/null || true
+          gh release create beta \
+            --title "$VERSION" \
+            --notes-file notes.md \
+            --prerelease \
+            --target "$GITHUB_SHA"
+
       - name: Say what landed
         run: |
           {
@@ -108,5 +144,5 @@ jobs:
             echo
             echo '`${{ steps.image.outputs.name }}:beta` is now ${{ steps.stamp.outputs.version }}.'
             echo
-            echo 'Pull it with `docker compose pull && docker compose up -d`.'
+            echo 'Installs on the beta channel will offer it. Pull with `docker compose pull && docker compose up -d`.'
           } >> "$GITHUB_STEP_SUMMARY"

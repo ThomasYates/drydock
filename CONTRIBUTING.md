@@ -85,10 +85,12 @@ into `beta` rather than into `main`.
 feature branch  ->  beta  ->  main  ->  tag  ->  release
 ```
 
-Every push to `beta` republishes `ghcr.io/thomasyates/drydock:beta`, so anything
-merged there can be used in earnest on a real install before it is promised to
-anyone. When what has gathered on `beta` is worth shipping, it goes to `main` as
-one pull request, and that is what gets tagged.
+Every push to `beta` republishes `ghcr.io/thomasyates/drydock:beta` and rewrites
+the `beta` pre-release, which is how an install set to the beta channel finds
+out there is something new. So anything merged there can be used in earnest on a
+real install before it is promised to anyone. When what has gathered on `beta`
+is worth shipping, it goes to `main` as one pull request, and that is what gets
+tagged.
 
 The point of the middle step is that a release stops being the first time
 something is used properly. It also means several changes can be tried together,
